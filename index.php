@@ -1,21 +1,16 @@
-#!/usr/bin/php
 <?php
 
-$_SERVER["DOCUMENT_ROOT"] = $_SERVER["HOME"] . "/www";
-
-if (php_sapi_name() !== 'cli') {
-	die('Скрипт предназначен для запуска из командной строки');
-}
+define("NO_KEEP_STATISTIC", true);
+define("NO_AGENT_CHECK", true);
+define('PUBLIC_AJAX_MODE', true);
 
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
+
 require_once("vendor/autoload.php");
 
 use League\Csv\Reader;
 use League\Csv\Writer;
 use Goutte\Client;
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Psr7;
-use GuzzleHttp\Exception\RequestException;
 
 try {
 
@@ -33,32 +28,7 @@ try {
 
 	// KORABLIK
 
-    // Сайт защищен от парсинга, возможна реализация через puppeteer
-
-    // FIXME 2й try/catch не нужен
-    /*
-	try {
-		$korablikClient = new GuzzleClient(
-			[
-				"allow_redirects" => true,
-				"curl" => [CURLOPT_USERAGENT => "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13) Gecko/20080311 Firefox/2.0.0.13"]
-			]
-		);
-
-		$response = $korablikClient->request('GET', $res[0][2]);
-
-		echo $response->getStatusCode() . PHP_EOL;
-
-		print_r($response->getHeaders());
-		print_r($response->getBody()->getContents());
-
-	} catch (RequestException $exception) {
-		echo Psr7\str($e->getRequest());
-		if ($e->hasResponse()) {
-			echo Psr7\str($e->getResponse());
-		}
-	}
-    */
+	// Сайт защищен от парсинга, возможна реализация через puppeteer
 
 	$korablikClient = new Client(
 		[
@@ -103,12 +73,11 @@ try {
 	$outputCsv->insertOne($headers);
 	$outputCsv->insertAll($res);
 
-	ob_start();
-	$outputCsv = $outputCsv->output("new_price.csv");
-	$contents = ob_get_contents();
-	ob_end_clean();
+	$fileName = "new_price_" . date("Y_m_d_h_i_s") . ".csv";
 
-	file_put_contents(__DIR__ . "/new_price.csv", $contents);
+	$outputCsv->output($fileName);
+
+	die();
 
 } catch (Exception $e) {
 	echo $e->getMessage();
