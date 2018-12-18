@@ -4,7 +4,18 @@ define("NO_KEEP_STATISTIC", true);
 define("NO_AGENT_CHECK", true);
 define('PUBLIC_AJAX_MODE', true);
 
-require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
+use \Bitrix\Main\Page\Asset;
+
+require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/header.php");
+//require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
+
+global $APPLICATION;
+
+Asset::getInstance()->addJs('/bitrix/js/main/file_upload_agent.js');
+
+//$APPLICATION->ShowHead();
+//CUtil::InitJSCore();
+CJSCore::Init(array('fx', 'ajax', 'dd'));
 
 require_once("vendor/autoload.php");
 
@@ -12,6 +23,31 @@ use League\Csv\Reader;
 use League\Csv\Writer;
 use Goutte\Client;
 
+$APPLICATION->IncludeComponent(
+	"bitrix:main.file.input",
+	"csv_upload",
+	array(
+		"INPUT_NAME"=>"TEST_NAME_INPUT",
+		"MULTIPLE"=>"N",
+		"MODULE_ID"=>"main",
+		"MAX_FILE_SIZE"=>"",
+		"ALLOW_UPLOAD"=>"F",
+		"ALLOW_UPLOAD_EXT"=>"csv",
+		"INPUT_VALUE" => $_POST["DOPFILE"]
+	),
+	false
+);?>
+
+
+
+<?
+// TODO
+// продолжить выполнение только после того, как файл успешно загружен,
+// window.BlogBFileDialog.prototype.ShowUploadedFile
+//
+?>
+
+<?
 try {
 
 	// Парсим CSV
@@ -75,12 +111,18 @@ try {
 
 	$fileName = "new_price_" . date("Y_m_d_h_i_s") . ".csv";
 
-	$outputCsv->output($fileName);
+//	$outputCsv->output($fileName);
 
-	die();
+//	die();
 
 } catch (Exception $e) {
 	echo $e->getMessage();
 }
+?>
+<script>
 
-require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php");
+
+</script>
+
+<?//require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php");?>
+<?require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/footer.php");?>
