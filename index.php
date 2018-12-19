@@ -23,10 +23,7 @@ CJSCore::Init(array('fx', 'ajax', 'dd'));
 		разделитель полей (Field delimiter) точка с запятой ; <br>
 		разделитель текста (Text delimiter) двойные кавычки "
 	</p>
-
 </div>
-
-
 
 <?
 
