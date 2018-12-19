@@ -20,13 +20,13 @@ try {
 
 	// Парсим CSV
 
-	if (is_array($jsonRequestBody) && !empty($jsonRequestBody)){
+	if (is_array($jsonRequestBody) && !empty($jsonRequestBody)) {
 		$fileRes = CFile::GetByID($jsonRequestBody['element_id']);
 		$fileArray = $fileRes->fetch();
 		$filePath = CFile::GetPath($jsonRequestBody['element_id']);
 	}
 
-	if ((string)$filePath !== ''){
+	if ((string)$filePath !== '') {
 		$inputCsv = Reader::createFromPath($_SERVER["DOCUMENT_ROOT"] . (string)$filePath, "r");
 	} else {
 		throw new Exception('Неправильный путь к исходному файлу');
@@ -84,26 +84,29 @@ try {
 	$headers[] = 'Цена Wildberries';
 	$headers[] = 'Цена Кораблик';
 	$outputCsv = Writer::createFromFileObject(new SplTempFileObject());
+	$outputCsv->setDelimiter(";");
+	$outputCsv->setEnclosure('"');
 	$outputCsv->insertOne($headers);
 	$outputCsv->insertAll($res);
 
 	$fileName = "new_price_" . date("Y_m_d_h_i_s") . ".csv";
+	$directoryPath = substr(__DIR__, 16);
 
 	ob_start();
 	$outputCsvContents = $outputCsv->output($fileName);
 	$outputCsvContents = ob_get_contents();
 	ob_end_clean();
 
-	// TODO получить нормальный путь к папке с файлом, обеспечить открытие диалога для скачивания файла в script.js
+	if (!is_dir(__DIR__ . "/output")) {
+		mkdir(__DIR__ . "/output", 0777, true);
+	}
 
-	// TODO разделитель
-
-	if( file_put_contents(__DIR__ . $fileName, $outputCsvContents) ){
-		echo json_encode(SITE_DIR . "test/tiptop-css/" . $fileName);
+	if (file_put_contents(__DIR__ . "/output/" . $fileName, $outputCsvContents)) {
+		echo json_encode($directoryPath . "/output/" . $fileName);
 	}
 
 } catch (Exception $e) {
 	echo $e->getMessage();
 }
 
-require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php");?>
+require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php"); ?>
