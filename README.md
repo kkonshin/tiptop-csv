@@ -19,3 +19,4 @@ https://tiptopkids.ru/test/tiptop-csv/
 
 Работать с готовым файлом при помощи OpenOffice Calc. Не использовать Excel. 
 
+Для работы парсера требуется компонент main.file.input с шаблоном csv_upload

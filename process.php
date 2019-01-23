@@ -1,4 +1,9 @@
 <?php
+
+define("NO_KEEP_STATISTIC", true);
+define("NO_AGENT_CHECK", true);
+define('PUBLIC_AJAX_MODE', true);
+
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
 require_once("vendor/autoload.php");
 
@@ -22,6 +27,7 @@ try {
 	$client->setProcedure('get_rendered_page');
 
 	$client->getProcedureLoader()->addLoader($procedureLoader);
+
 	// TODO эту часть в цикл $res
 
 	// FIXME адрес страницы?
@@ -29,11 +35,11 @@ try {
 
 	$response = $client->getMessageFactory()->createResponse();
 
-	$client->getEngine()->debug(true);
+//	$client->getEngine()->debug(true);
 
 	$client->send($request, $response);
 
-	file_put_contents(__DIR__. "/debug.log", print_r($client->getLog(), true));
+//	file_put_contents(__DIR__. "/debug.log", print_r($client->getLog(), true));
 
 	if ($response->getStatus() === 200){
 		file_put_contents(__DIR__ . "/contents.html", print_r($response->getContent(), true));
