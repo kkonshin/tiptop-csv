@@ -1,0 +1,5 @@
+node_modules/*
+vendor/*
+composer.json
+package.json
+*.csv

@@ -1,0 +1,13 @@
+var page = require('webpage').create();
+// page.open('{{ input.getUrl() }}', '{{ input.getMethod() }}', '{{ input.getBody() }}', function(status){
+page.open('{{ input.getUrl() }}', function(status){
+    body = page.evaluate(function(){
+        return document.body.innerHTML;
+    })
+    // system.stdout.write(JSON.stringify('test'));
+
+    phantom.exit(1);
+});
+phantom.onError = function(msg, trace) {
+    phantom.exit(1);
+};
