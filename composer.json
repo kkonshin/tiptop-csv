@@ -1,0 +1,23 @@
+{
+    "require": {
+        "league/csv": "^8.0",
+        "fabpot/goutte": "^3.2",
+        "jonnyw/php-phantomjs": "4.*"
+    },
+    "autoload": {
+        "psr-4": {
+
+        }
+    },
+    "scripts": {
+        "post-install-cmd":[
+            "PhantomInstaller\\Installer::installPhantomJS"
+        ],
+        "post-update-cmd": [
+            "PhantomInstaller\\Installer::installPhantomJS"
+        ]
+    },
+    "config": {
+        "bin-dir": "bin"
+    }
+}

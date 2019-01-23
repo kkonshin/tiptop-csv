@@ -1,0 +1,21 @@
+{
+  "name": "tiptop-csv",
+  "version": "1.0.0",
+  "description": "Доступ к папке проекта закрыт для всех групп пользователей, кроме:",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://kkonshin@github.com/kkonshin/tiptop-csv.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kkonshin/tiptop-csv/issues"
+  },
+  "homepage": "https://github.com/kkonshin/tiptop-csv#readme"
+}
