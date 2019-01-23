@@ -1,17 +1,29 @@
-var res = "test";
-phantom.exit(1);
-/*
 var page = require('webpage').create();
-// page.open('{{ input.getUrl() }}', '{{ input.getMethod() }}', '{{ input.getBody() }}', function(status){
-page.open('{{ input.getUrl() }}', function(status){
-    body = page.evaluate(function(){
-        return document.body.innerHTML;
-    })
-    // system.stdout.write(JSON.stringify('test'));
+var system = require('system');
+var response;
 
-    phantom.exit(1);
-});
-phantom.onError = function(msg, trace) {
+page.onResourceReceived = function (r) {
+    response = r;
+};
+
+phantom.onError = function (msg, trace) {
+    console.log(msg);
+    console.log(trace);
     phantom.exit(1);
 };
-*/
+
+// page.open('{{ input.getUrl() }}', '{{ input.getMethod() }}', '', function (status) {
+page.open('https://www.wildberries.ru/catalog/5544135/detail.aspx?targetUrl=ES', 'GET', '', function (status) {
+    body = page.evaluate(function () {
+        return document.body.innerHTML;
+    });
+    title = page.evaluate(function () {
+        return document.title;
+    })
+
+    console.log(status);
+    // console.log(body);
+    console.log(title);
+    phantom.exit(1);
+});
+

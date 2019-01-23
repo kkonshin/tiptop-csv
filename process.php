@@ -13,10 +13,9 @@ use Goutte\Client;
 use JonnyW\PhantomJs\Client as PJSClient;
 use JonnyW\PhantomJs\DependencyInjection\ServiceContainer as PJSServiceContainer;
 
+/*
 try {
 	$jsLocation = __DIR__ . '/js';
-
-//	file_put_contents(__DIR__ . '/js_location.log', print_r($jsLocation, true));
 
 	$serviceContainer = PJSServiceContainer::getInstance();
 
@@ -24,32 +23,39 @@ try {
 
 	$client = PJSClient::getInstance();
 
-	$client->setProcedure('get_rendered_page');
-
 	$client->getProcedureLoader()->addLoader($procedureLoader);
+
+	// TODO включить кеш в продакшене
+
+	$client->getProcedureCompiler()->clearCache();
+	$client->getProcedureCompiler()->disableCache();
+
+//	$client->getEngine()->debug(true);
+
+	$client->isLazy();
+
+//	$client->setProcedure('get_rendered_page');
 
 	// TODO эту часть в цикл $res
 
 	// FIXME адрес страницы?
 	$request = $client->getMessageFactory()->createRequest('https://www.wildberries.ru/catalog/5544135/detail.aspx?targetUrl=ES');
 
-	$response = $client->getMessageFactory()->createResponse();
+	$request->setTimeout(5000);
 
-//	$client->getEngine()->debug(true);
+	$response = $client->getMessageFactory()->createResponse();
 
 	$client->send($request, $response);
 
-//	file_put_contents(__DIR__. "/debug.log", print_r($client->getLog(), true));
-
-	if ($response->getStatus() === 200){
+	if ($response->getStatus() === 200) {
 		file_put_contents(__DIR__ . "/contents.html", print_r($response->getContent(), true));
 	} else {
 		file_put_contents(__DIR__ . "/responseStatus.log", print_r($response->getStatus(), true));
 	}
-
-} catch (Exception $e){
+} catch (Exception $e) {
 	file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
 }
+*/
 
 try {
 	// Получаем информацию о загруженном файле из main.file.input:csv_upload
@@ -100,34 +106,26 @@ try {
 					});
 					$res[$resKey][] = trim($wbPrice[0]);
 
-					// Скидка до перерисовки дива JS (до применения персонального промокода);
-					$wbDiscountPrice = $wbCrawler->filter('.about-bonus .add-discount-text-price')->each(function($node){
+					$wbDiscountPrice = $wbCrawler->filter('.about-bonus .add-discount-text-price')->each(function ($node) {
 						return $node->text();
 					});
 
 					$res[$resKey][] = trim($wbDiscountPrice[0]);
-
-					// TODO тернарник
-//					if(strripos($wbDiscountPrice, '{{') === false){
-//						$res[$resKey][] = trim($wbDiscountPrice[0]) . PHP_EOL;
-//					} else {
-//						$res[$resKey][] = '';
-//					}
 
 				}
 			}
 		}
 	}
 
-	foreach ($res as $outerKey => $outerValue){
-		foreach ($outerValue as $innerKey => $innerValue ){
-			if (stripos($innerValue, "{{") !== false){
+	foreach ($res as $outerKey => $outerValue) {
+		foreach ($outerValue as $innerKey => $innerValue) {
+			if (stripos($innerValue, "{{") !== false) {
 				$res[$outerKey][$innerKey] = '';
 			}
 		}
 	}
 
-	file_put_contents(__DIR__."/res.log", print_r($res, true));
+//	file_put_contents(__DIR__ . "/res.log", print_r($res, true));
 
 	// Записываем csv
 
@@ -148,7 +146,6 @@ try {
 	$outputCsvContents = ob_get_contents();
 	ob_end_clean();
 
-
 	// FIXME обязательно создавать файл на сервере?
 
 	if (!is_dir(__DIR__ . "/output")) {
@@ -160,6 +157,6 @@ try {
 	}
 
 } catch (Exception $e) {
-	echo $e->getMessage();
+	file_put_contents(__DIR__ . "/global_errors.log", print_r($e->getMessage(), true));
 }
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php"); ?>
