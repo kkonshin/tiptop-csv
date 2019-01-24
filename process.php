@@ -13,7 +13,6 @@ use Goutte\Client;
 use JonnyW\PhantomJs\Client as PJSClient;
 use JonnyW\PhantomJs\DependencyInjection\ServiceContainer as PJSServiceContainer;
 
-/*
 try {
 	$jsLocation = __DIR__ . '/js';
 
@@ -41,7 +40,7 @@ try {
 	// FIXME адрес страницы?
 	$request = $client->getMessageFactory()->createRequest('https://www.wildberries.ru/catalog/5544135/detail.aspx?targetUrl=ES');
 
-	$request->setTimeout(5000);
+	$request->setTimeout(3000);
 
 	$response = $client->getMessageFactory()->createResponse();
 
@@ -55,7 +54,6 @@ try {
 } catch (Exception $e) {
 	file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
 }
-*/
 
 try {
 	// Получаем информацию о загруженном файле из main.file.input:csv_upload
