@@ -12,9 +12,7 @@ use League\Csv\Writer;
 use Goutte\Client;
 use JonnyW\PhantomJs\Client as PJSClient;
 use JonnyW\PhantomJs\DependencyInjection\ServiceContainer as PJSServiceContainer;
-
-// TODO тестируем использование краулера для разбора html, полученного через фантом напрямую
-use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\DomCrawler\Crawler; // для разборки респонса phantomjs
 
 $jsLocation = __DIR__ . '/js';
 
@@ -40,57 +38,8 @@ try {
 		return $index > 0;
 	})->fetchAll();
 
-	// WILDBERRIES через PHP-PHANTOMJS
-	/*
-	try {
-
-		// TODO эту часть в цикл $res
-		$serviceContainer = PJSServiceContainer::getInstance();
-
-		$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
-
-		$client = PJSClient::getInstance();
-
-		$client->getProcedureLoader()->addLoader($procedureLoader);
-
-		// TODO включить кеш в продакшене
-
-		$client->getProcedureCompiler()->clearCache();
-
-		$client->getProcedureCompiler()->disableCache();
-
-		$client->isLazy();
-
-		$request = $client->getMessageFactory()->createRequest($resValue[3]);
-
-		$request->setTimeout(3000);
-
-		$response = $client->getMessageFactory()->createResponse();
-
-		$client->send($request, $response);
-
-		if ($response->getStatus() === 200) {
-
-			$testCrawler = new Crawler($response->getContent());
-
-			$testResult = $testCrawler->filter('#sessid')->each(function ($node) {
-				return $node->text();
-			});
-
-			$testArray[] = $testResult;
-		} else {
-			file_put_contents(__DIR__ . "/responseStatus.log", print_r($response->getStatus(), true));
-		}
-
-		file_put_contents(__DIR__ . "/testArray.log", print_r($testArray, true));
-
-	} catch (Exception $e) {
-		file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
-	}
-	*/
-
 // KORABLIK
-// Сайт защищен от парсинга, возможна реализация через puppeteer
+	// Сайт защищен от парсинга, возможна реализация через puppeteer/phantomjs?
 	/*
 	$korablikClient = new Client(
 		[
@@ -105,16 +54,6 @@ try {
 	*/
 
 // WILDBERRIES
-
-	/*
-	$testClient = new Client();
-	$testCrawler = $testClient->request('GET', $res[0][3]);
-	$testBody = $testCrawler->filter('body')->each(function ($node){
-		return $node->html();
-	});
-
-	file_put_contents(__DIR__. "/testBody.html", print_r($testBody, true));
-	*/
 
 	$wbClient = new Client();
 
@@ -192,6 +131,40 @@ try {
 		}
 	}
 
+	file_put_contents(__DIR__ . "/resBefore.log", print_r($res, true));
+
+// TIPTOPKIDS
+
+	$ttcClient = new Client();
+
+	if (!empty($res)) {
+
+		foreach ($res as $resKey => $resValue) {
+
+			if (!empty($resValue[1])) {
+
+				$ttcCrawler = $ttcClient->request('GET', $resValue[1]);
+
+				if ($ttcCrawler->getUri() === $resValue[1]) {
+
+					$ttcPrice = $ttcCrawler->filter('.price__pv.js-price_pv-3')->each(function ($node) {
+						return $node->text();
+					});
+
+					$res[$resKey][count($resValue)] = trim($ttcPrice[0]);
+
+					// Базовая скидка
+
+					$ttcDiscountPrice = $ttcCrawler->filter('.price__pdv.js-price_pdv-3')->each(function ($node) {
+						return $node->text();
+					});
+
+					$res[$resKey][count($resValue)] = trim($ttcDiscountPrice[0]);
+				}
+			}
+		}
+	}
+
 	// Очистим прайс от незаполненных полей шаблонизатора
 
 	foreach ($res as $outerKey => $outerValue) {
@@ -202,7 +175,7 @@ try {
 		}
 	}
 
-//	file_put_contents(__DIR__ . "/res.log", print_r($res, true));
+	file_put_contents(__DIR__ . "/resAfter.log", print_r($res, true));
 
 // Записываем csv
 
