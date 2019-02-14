@@ -13,47 +13,10 @@ use Goutte\Client;
 use JonnyW\PhantomJs\Client as PJSClient;
 use JonnyW\PhantomJs\DependencyInjection\ServiceContainer as PJSServiceContainer;
 
-try {
-	$jsLocation = __DIR__ . '/js';
+// TODO тестируем использование краулера для разбора html, полученного через фантом напрямую
+use Symfony\Component\DomCrawler\Crawler;
 
-	$serviceContainer = PJSServiceContainer::getInstance();
-
-	$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
-
-	$client = PJSClient::getInstance();
-
-	$client->getProcedureLoader()->addLoader($procedureLoader);
-
-	// TODO включить кеш в продакшене
-
-	$client->getProcedureCompiler()->clearCache();
-	$client->getProcedureCompiler()->disableCache();
-
-//	$client->getEngine()->debug(true);
-
-	$client->isLazy();
-
-//	$client->setProcedure('get_rendered_page');
-
-	// TODO эту часть в цикл $res
-
-	// FIXME адрес страницы?
-	$request = $client->getMessageFactory()->createRequest('https://www.wildberries.ru/catalog/5544135/detail.aspx?targetUrl=ES');
-
-	$request->setTimeout(3000);
-
-	$response = $client->getMessageFactory()->createResponse();
-
-	$client->send($request, $response);
-
-	if ($response->getStatus() === 200) {
-		file_put_contents(__DIR__ . "/contents.html", print_r($response->getContent(), true));
-	} else {
-		file_put_contents(__DIR__ . "/responseStatus.log", print_r($response->getStatus(), true));
-	}
-} catch (Exception $e) {
-	file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
-}
+$jsLocation = __DIR__ . '/js';
 
 try {
 	// Получаем информацию о загруженном файле из main.file.input:csv_upload
@@ -77,8 +40,57 @@ try {
 		return $index > 0;
 	})->fetchAll();
 
-	// KORABLIK
-	// Сайт защищен от парсинга, возможна реализация через puppeteer
+	// WILDBERRIES через PHP-PHANTOMJS
+	/*
+	try {
+
+		// TODO эту часть в цикл $res
+		$serviceContainer = PJSServiceContainer::getInstance();
+
+		$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+
+		$client = PJSClient::getInstance();
+
+		$client->getProcedureLoader()->addLoader($procedureLoader);
+
+		// TODO включить кеш в продакшене
+
+		$client->getProcedureCompiler()->clearCache();
+
+		$client->getProcedureCompiler()->disableCache();
+
+		$client->isLazy();
+
+		$request = $client->getMessageFactory()->createRequest($resValue[3]);
+
+		$request->setTimeout(3000);
+
+		$response = $client->getMessageFactory()->createResponse();
+
+		$client->send($request, $response);
+
+		if ($response->getStatus() === 200) {
+
+			$testCrawler = new Crawler($response->getContent());
+
+			$testResult = $testCrawler->filter('#sessid')->each(function ($node) {
+				return $node->text();
+			});
+
+			$testArray[] = $testResult;
+		} else {
+			file_put_contents(__DIR__ . "/responseStatus.log", print_r($response->getStatus(), true));
+		}
+
+		file_put_contents(__DIR__ . "/testArray.log", print_r($testArray, true));
+
+	} catch (Exception $e) {
+		file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
+	}
+	*/
+
+// KORABLIK
+// Сайт защищен от парсинга, возможна реализация через puppeteer
 	/*
 	$korablikClient = new Client(
 		[
@@ -92,17 +104,37 @@ try {
 	});
 	*/
 
-	// WILDBERRIES
+// WILDBERRIES
+
+	/*
+	$testClient = new Client();
+	$testCrawler = $testClient->request('GET', $res[0][3]);
+	$testBody = $testCrawler->filter('body')->each(function ($node){
+		return $node->html();
+	});
+
+	file_put_contents(__DIR__. "/testBody.html", print_r($testBody, true));
+	*/
+
 	$wbClient = new Client();
+
 	if (!empty($res)) {
+
 		foreach ($res as $resKey => $resValue) {
+
 			if (!empty($resValue[3])) {
+
 				$wbCrawler = $wbClient->request('GET', $resValue[3]);
+
 				if ($wbCrawler->getUri() === $resValue[3]) {
+
 					$wbPrice = $wbCrawler->filter('#Price ins')->each(function ($node) {
 						return $node->text();
 					});
+
 					$res[$resKey][] = trim($wbPrice[0]);
+
+					// Базовая скидка
 
 					$wbDiscountPrice = $wbCrawler->filter('.about-bonus .add-discount-text-price')->each(function ($node) {
 						return $node->text();
@@ -110,10 +142,57 @@ try {
 
 					$res[$resKey][] = trim($wbDiscountPrice[0]);
 
+					// Скидка + промокод (через phantomjs)
+
+					try {
+
+						$serviceContainer = PJSServiceContainer::getInstance();
+
+						$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+
+						$client = PJSClient::getInstance();
+
+						$client->getProcedureLoader()->addLoader($procedureLoader);
+
+						// TODO включить кеш в продакшене
+
+//						$client->getProcedureCompiler()->clearCache();
+
+//						$client->getProcedureCompiler()->disableCache();
+
+						$client->isLazy();
+
+						$request = $client->getMessageFactory()->createRequest($resValue[3]);
+
+						$request->setTimeout(3000);
+
+						$response = $client->getMessageFactory()->createResponse();
+
+						$client->send($request, $response);
+
+						$phantomCrawler = new Crawler($response->getContent());
+
+						$phantomCrawlerResult = $phantomCrawler->filter('.j-promo-tooltip-content p:last-child')->each(function ($node) {
+							return $node->text();
+						});
+
+						if (stripos($phantomCrawlerResult[0], "{{") === false
+							&& stripos($phantomCrawlerResult[0], "Скидка") === false
+							&& stripos($phantomCrawlerResult[0], "Промокод") !== false
+						) {
+							$result = explode("%", $phantomCrawlerResult[0]);
+							$res[$resKey][] = trim($result[count($result) - 1]);
+						}
+
+					} catch (Exception $e) {
+						file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
+					}
 				}
 			}
 		}
 	}
+
+	// Очистим прайс от незаполненных полей шаблонизатора
 
 	foreach ($res as $outerKey => $outerValue) {
 		foreach ($outerValue as $innerKey => $innerValue) {
@@ -125,10 +204,13 @@ try {
 
 //	file_put_contents(__DIR__ . "/res.log", print_r($res, true));
 
-	// Записываем csv
+// Записываем csv
 
 	$headers[] = 'Цена Wildberries';
-	$headers[] = 'Цена Wildberries со скидкой 20%';
+	$headers[] = 'Цена Wildberries со скидкой';
+	$headers[] = 'Цена Wildberries со скидкой и промокодом';
+	$headers[] = 'Цена Tiptopkids';
+	$headers[] = 'Цена Tiptopkids со скидкой';
 
 	$outputCsv = Writer::createFromFileObject(new SplTempFileObject());
 	$outputCsv->setDelimiter(";");
@@ -136,7 +218,7 @@ try {
 	$outputCsv->insertOne($headers);
 	$outputCsv->insertAll($res);
 
-	$fileName = "new_price_" . date("Y_m_d__h_i_s") . ".csv";
+	$fileName = "new_price.csv";
 	$directoryPath = substr(__DIR__, 16);
 
 	ob_start();
@@ -144,10 +226,8 @@ try {
 	$outputCsvContents = ob_get_contents();
 	ob_end_clean();
 
-	// FIXME обязательно создавать файл на сервере?
-
 	if (!is_dir(__DIR__ . "/output")) {
-		mkdir(__DIR__ . "/output", 0777, true);
+		mkdir(__DIR__ . "/output", 0770, true);
 	}
 
 	if (file_put_contents(__DIR__ . "/output/" . $fileName, $outputCsvContents)) {
@@ -158,3 +238,4 @@ try {
 	file_put_contents(__DIR__ . "/global_errors.log", print_r($e->getMessage(), true));
 }
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php"); ?>
+

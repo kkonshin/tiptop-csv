@@ -37,7 +37,12 @@ if ($arParams["ALLOW_UPLOAD"] != "N")
 		?><?=($arParams["ALLOW_UPLOAD"] == "I" ? GetMessage("BFDND_UPLOAD_IMAGES") : GetMessage("BFDND_UPLOAD_FILES"))?></span></a>
 
 <div id="file-selectdialog-<?=$uid?>" class="file-selectdialog" style="display:none;">
-	<table id="file-file-template" style='display:none;'>
+
+    <svg class="spinner" viewBox="0 0 50 50">
+        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+    </svg>
+
+    <table id="file-file-template" style='display:none;'>
 		<tr class="file-inline-file" id="file-doc">
 			<td class="files-name">
 				<span class="files-text">
