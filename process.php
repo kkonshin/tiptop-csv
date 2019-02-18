@@ -38,6 +38,30 @@ try {
 		return $index > 0;
 	})->fetchAll();
 
+	$columnNames = [
+		'Цена Wildberries',
+		'Цена Wildberries со скидкой',
+		'Цена Wildberries со скидкой и промокодом',
+		'Цена Tiptopkids',
+		'Цена Tiptopkids со скидкой'
+	];
+
+	foreach ($columnNames as $key => $value){
+		if (!in_array($value, $headers)){
+			$headers[] = $value;
+		}
+	}
+
+	$headersCount = count($headers);
+
+	foreach ($res as $k => $v){
+		if (count($v) < $headersCount){
+			$diff = $headersCount - count($v);
+			$empty = array_fill($headersCount - $diff, $diff, '');
+			$res[$k] = array_merge($res[$k], $empty);
+		}
+	}
+
 // KORABLIK
 	// Сайт защищен от парсинга, возможна реализация через puppeteer/phantomjs?
 	/*
@@ -71,7 +95,7 @@ try {
 						return $node->text();
 					});
 
-					$res[$resKey][] = trim($wbPrice[0]);
+					$res[$resKey][4] = trim($wbPrice[0]);
 
 					// Базовая скидка
 
@@ -79,7 +103,7 @@ try {
 						return $node->text();
 					});
 
-					$res[$resKey][] = trim($wbDiscountPrice[0]);
+					$res[$resKey][5] = trim($wbDiscountPrice[0]);
 
 					// Скидка + промокод (через phantomjs)
 
@@ -120,7 +144,7 @@ try {
 							&& stripos($phantomCrawlerResult[0], "Промокод") !== false
 						) {
 							$result = explode("%", $phantomCrawlerResult[0]);
-							$res[$resKey][] = trim($result[count($result) - 1]);
+							$res[$resKey][6] = trim($result[count($result) - 1]);
 						}
 
 					} catch (Exception $e) {
@@ -130,8 +154,6 @@ try {
 			}
 		}
 	}
-
-	file_put_contents(__DIR__ . "/resBefore.log", print_r($res, true));
 
 // TIPTOPKIDS
 
@@ -151,7 +173,7 @@ try {
 						return $node->text();
 					});
 
-					$res[$resKey][count($resValue)] = trim($ttcPrice[0]);
+					$res[$resKey][7] = trim($ttcPrice[0]);
 
 					// Базовая скидка
 
@@ -159,7 +181,12 @@ try {
 						return $node->text();
 					});
 
-					$res[$resKey][count($resValue)] = trim($ttcDiscountPrice[0]);
+					if (!empty($res[$resKey][7])){
+						$res[$resKey][8] = trim($ttcDiscountPrice[0]);
+					} else {
+						$res[$resKey][7] = trim($ttcDiscountPrice[0]);
+					}
+
 				}
 			}
 		}
@@ -175,20 +202,16 @@ try {
 		}
 	}
 
-	file_put_contents(__DIR__ . "/resAfter.log", print_r($res, true));
+//	file_put_contents(__DIR__ . "/resAfter.log", print_r($res, true));
 
 // Записываем csv
-
-	$headers[] = 'Цена Wildberries';
-	$headers[] = 'Цена Wildberries со скидкой';
-	$headers[] = 'Цена Wildberries со скидкой и промокодом';
-	$headers[] = 'Цена Tiptopkids';
-	$headers[] = 'Цена Tiptopkids со скидкой';
 
 	$outputCsv = Writer::createFromFileObject(new SplTempFileObject());
 	$outputCsv->setDelimiter(";");
 	$outputCsv->setEnclosure('"');
+
 	$outputCsv->insertOne($headers);
+
 	$outputCsv->insertAll($res);
 
 	$fileName = "new_price.csv";
@@ -207,8 +230,9 @@ try {
 		echo json_encode($directoryPath . "/output/" . $fileName);
 	}
 
+	// TODO заново читаем файл?
+
 } catch (Exception $e) {
 	file_put_contents(__DIR__ . "/global_errors.log", print_r($e->getMessage(), true));
 }
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php"); ?>
-
