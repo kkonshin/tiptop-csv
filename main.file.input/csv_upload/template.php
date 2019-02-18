@@ -31,18 +31,16 @@ HTML;
 if ($arParams["ALLOW_UPLOAD"] != "N")
 {
 ?>
-
-<a href="javascript:void(0);" id="file-selectdialogswitcher-<?=$uid?>" class="file-selectdialog-switcher" style="font-size: 1.2rem;"<?
+<a href="javascript:void(0);" id="file-selectdialogswitcher-<?=$uid?>" class="file-selectdialog-switcher" style="font-size: 1.2rem; display: none;"<?
 	?>onclick="BX.onCustomEvent(this.parentNode, 'BFileDLoadFormController');return false;"><span><?
 		?><?=($arParams["ALLOW_UPLOAD"] == "I" ? GetMessage("BFDND_UPLOAD_IMAGES") : GetMessage("BFDND_UPLOAD_FILES"))?></span></a>
-
 <div id="file-selectdialog-<?=$uid?>" class="file-selectdialog" style="display:none;">
 
     <svg class="spinner" viewBox="0 0 50 50">
         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
     </svg>
 
-    <table id="file-file-template" style='display:none;'>
+	<table id="file-file-template" style='display:none;'>
 		<tr class="file-inline-file" id="file-doc">
 			<td class="files-name">
 				<span class="files-text">
@@ -160,6 +158,7 @@ if ($arParams["ALLOW_UPLOAD"] != "N")
 		?>
 	});
 	</script>
+
 </div>
 <?
 }
@@ -207,3 +206,11 @@ else if (!empty($arValue))
 	</script>
 </div>
 <? } ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const formLink = document.querySelector('#file-selectdialogswitcher-<?=$uid?>');
+        if (typeof formLink !== 'undefined' && !!formLink){
+            formLink.click();
+        }
+    });
+</script>
