@@ -16,6 +16,62 @@ use Symfony\Component\DomCrawler\Crawler; // для разборки респо�
 
 $jsLocation = __DIR__ . '/js';
 
+function runPhantomCrawler($res, $index, $filter)
+{
+	global $jsLocation;
+
+	if (!empty($res)) {
+
+		foreach ($res as $resKey => $resValue) {
+
+			$serviceContainer = PJSServiceContainer::getInstance();
+
+			$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+
+			$client = PJSClient::getInstance();
+
+			$client->getProcedureLoader()->addLoader($procedureLoader);
+
+			// TODO включить кеш в продакшене
+
+//						$client->getProcedureCompiler()->clearCache();
+
+//						$client->getProcedureCompiler()->disableCache();
+
+			$client->isLazy();
+
+			$request = $client->getMessageFactory()->createRequest($resValue[$index]);
+
+			$request->setTimeout(3000);
+
+			$response = $client->getMessageFactory()->createResponse();
+
+			$client->send($request, $response);
+
+			$phantomCrawler = new Crawler($response->getContent());
+
+//			file_put_contents(__DIR__ . "/phantomCrawler.log", print_r($phantomCrawler, true));
+
+			$phantomCrawlerResult = $phantomCrawler->filter($filter)->each(function ($node) {
+				return $node->text();
+			});
+
+//			file_put_contents(__DIR__ . "/phantomCrawlerResult.log", print_r($phantomCrawlerResult, true));
+
+
+			if (stripos($phantomCrawlerResult[0], "{{") === false
+				&& stripos($phantomCrawlerResult[0], "Скидка") === false
+				&& stripos($phantomCrawlerResult[0], "Промокод") !== false
+			) {
+				$result = explode("%", $phantomCrawlerResult[0]);
+				$res[$resKey][6] = trim($result[count($result) - 1]);
+			}
+		}
+	}
+	return $res;
+}
+
+
 try {
 	// Получаем информацию о загруженном файле из main.file.input:csv_upload
 	$filePath = '';
@@ -49,16 +105,16 @@ try {
 		'Цена Tiptopkids со скидкой'
 	];
 
-	foreach ($columnNames as $key => $value){
-		if (!in_array($value, $headers)){
+	foreach ($columnNames as $key => $value) {
+		if (!in_array($value, $headers)) {
 			$headers[] = $value;
 		}
 	}
 
 	$headersCount = count($headers);
 
-	foreach ($res as $k => $v){
-		if (count($v) < $headersCount){
+	foreach ($res as $k => $v) {
+		if (count($v) < $headersCount) {
 			$diff = $headersCount - count($v);
 			$empty = array_fill($headersCount - $diff, $diff, '');
 			$res[$k] = array_merge($res[$k], $empty);
@@ -82,21 +138,38 @@ try {
 
 // WILDBERRIES
 
+	//TEMP
+//	$filter = '.j-promo-tooltip-content p:last-child';
+//	$res = runPhantomCrawler($res, 3, $filter);
+//	file_put_contents(__DIR__ . "/wbRes.log", print_r($res, true));
+//	exit();
+	//ENDTEMP
+
 	$wbClient = new Client();
 
 	if (!empty($res)) {
 
 		foreach ($res as $resKey => $resValue) {
 
-			if (!empty($resValue[3]) && strpos($resValue[3], "http")) {
+			if (!empty($resValue[3]) && (strpos($resValue[3], "http") !== false)) {
+
+//				file_put_contents(__DIR__ . "/countUrls.log", print_r("1", true), FILE_APPEND);
 
 				$wbCrawler = $wbClient->request('GET', $resValue[3]);
 
+//				file_put_contents(__DIR__ . "/wbCrawler.log", print_r($wbCrawler, true), FILE_APPEND);
+
 				if ($wbCrawler->getUri() === $resValue[3]) {
+
+					// FIXME может возвращать неожиданный результат - перенести на фантом?
 
 					$wbPrice = $wbCrawler->filter('#Price ins')->each(function ($node) {
 						return $node->text();
 					});
+
+					//TEMP пробуем реализацию через фантом
+					$serviceContainer = PJSServiceContainer::getInstance();
+					// ENDTEMP
 
 					$res[$resKey][4] = trim($wbPrice[0]);
 
@@ -155,8 +228,13 @@ try {
 					}
 				}
 			}
+
+			file_put_contents(__DIR__ . "/wbRes.log", print_r($res, true));
+
 		}
 	}
+
+
 
 // TIPTOPKIDS
 
@@ -166,7 +244,7 @@ try {
 
 		foreach ($res as $resKey => $resValue) {
 
-			if (!empty($resValue[1])) {
+			if (!empty($resValue[1]) && (strpos($resValue[1], "http") !== false)) {
 
 				$ttcCrawler = $ttcClient->request('GET', $resValue[1]);
 
@@ -184,7 +262,7 @@ try {
 						return $node->text();
 					});
 
-					if (!empty($res[$resKey][7])){
+					if (!empty($res[$resKey][7])) {
 						$res[$resKey][8] = trim($ttcDiscountPrice[0]);
 					} else {
 						$res[$resKey][7] = trim($ttcDiscountPrice[0]);
