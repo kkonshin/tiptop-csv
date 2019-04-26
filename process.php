@@ -9,68 +9,11 @@ require_once("vendor/autoload.php");
 
 use League\Csv\Reader;
 use League\Csv\Writer;
-use Goutte\Client;
 use JonnyW\PhantomJs\Client as PJSClient;
 use JonnyW\PhantomJs\DependencyInjection\ServiceContainer as PJSServiceContainer;
 use Symfony\Component\DomCrawler\Crawler; // для разборки респонса phantomjs
 
 $jsLocation = __DIR__ . '/js';
-
-function runPhantomCrawler($res, $index, $filter)
-{
-	global $jsLocation;
-
-	if (!empty($res)) {
-
-		foreach ($res as $resKey => $resValue) {
-
-			$serviceContainer = PJSServiceContainer::getInstance();
-
-			$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
-
-			$client = PJSClient::getInstance();
-
-			$client->getProcedureLoader()->addLoader($procedureLoader);
-
-			// TODO включить кеш в продакшене
-
-//						$client->getProcedureCompiler()->clearCache();
-
-//						$client->getProcedureCompiler()->disableCache();
-
-			$client->isLazy();
-
-			$request = $client->getMessageFactory()->createRequest($resValue[$index]);
-
-			$request->setTimeout(3000);
-
-			$response = $client->getMessageFactory()->createResponse();
-
-			$client->send($request, $response);
-
-			$phantomCrawler = new Crawler($response->getContent());
-
-//			file_put_contents(__DIR__ . "/phantomCrawler.log", print_r($phantomCrawler, true));
-
-			$phantomCrawlerResult = $phantomCrawler->filter($filter)->each(function ($node) {
-				return $node->text();
-			});
-
-//			file_put_contents(__DIR__ . "/phantomCrawlerResult.log", print_r($phantomCrawlerResult, true));
-
-
-			if (stripos($phantomCrawlerResult[0], "{{") === false
-				&& stripos($phantomCrawlerResult[0], "Скидка") === false
-				&& stripos($phantomCrawlerResult[0], "Промокод") !== false
-			) {
-				$result = explode("%", $phantomCrawlerResult[0]);
-				$res[$resKey][6] = trim($result[count($result) - 1]);
-			}
-		}
-	}
-	return $res;
-}
-
 
 try {
 	// Получаем информацию о загруженном файле из main.file.input:csv_upload
@@ -78,7 +21,6 @@ try {
 	$jsonRequest = file_get_contents('php://input');
 	$jsonRequestBody = json_decode($jsonRequest, true);
 
-//	file_put_contents(__DIR__ . "/jsonRequestBody.log", print_r($jsonRequestBody, true));
 	// Парсим CSV
 	if (is_array($jsonRequestBody) && !empty($jsonRequestBody)) {
 		$fileRes = CFile::GetByID($jsonRequestBody['element_id']);
@@ -95,7 +37,6 @@ try {
 	$res = $inputCsv->addFilter(function ($row, $index) {
 		return $index > 0;
 	})->fetchAll();
-
 
 	$columnNames = [
 		'Цена Wildberries',
@@ -121,160 +62,136 @@ try {
 		}
 	}
 
-// KORABLIK
+	// KORABLIK
 	// Сайт защищен от парсинга, возможна реализация через puppeteer/phantomjs?
 	/*
-	$korablikClient = new Client(
-		[
-			"allow_redirects" => true,
-			"curl" => [CURLOPT_USERAGENT => "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.13) Gecko/20080311 Firefox/2.0.0.13"]
-		]
-	);
-	$korablikCrawler = $korablikClient->request('GET', $res[0][2]);
-	$korablikPrice = $korablikCrawler->filter('#current_offer_price')->each(function ($node) {
-		return $node->attr('data-price') . PHP_EOL;
-	});
+	if (!empty($res)) {
+		foreach ($res as $resKey => $resValue) {
+			if (!empty($resValue[3]) && (strpos($resValue[2], "http") !== false)) {
+				try {
+					$serviceContainer = PJSServiceContainer::getInstance();
+					$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+					$client = PJSClient::getInstance();
+					$client->getProcedureLoader()->addLoader($procedureLoader);
+					$client->isLazy();
+					$request = $client->getMessageFactory()->createRequest($resValue[2]);
+					$request->setTimeout(3000);
+					$response = $client->getMessageFactory()->createResponse();
+					$client->send($request, $response);
+					$phantomCrawler = new Crawler($response->getContent());
+
+					$phantomBasePrice = $phantomCrawler->filter('#current_offer_price')->each(function ($node) {
+						return $node->text();
+					});
+
+//					$phantomDiscountPrice = $phantomCrawler->filter('.about-bonus .add-discount-text-price')->each(function ($node) {
+//						return $node->text();
+//					});
+
+//					$phantomFinalPrice = $phantomCrawler->filter('.j-promo-tooltip-content p:last-child')->each(function ($node) {
+//						return $node->text();
+//					});
+
+					$res[$resKey][9] = trim($phantomBasePrice[0]);
+//					$res[$resKey][10] = trim($phantomDiscountPrice[0]);
+
+//					if (stripos($phantomFinalPrice[0], "{{") === false
+//						&& stripos($phantomFinalPrice[0], "Скидка") === false
+//						&& stripos($phantomFinalPrice[0], "Промокод") !== false
+//					) {
+//						$result = explode("%", $phantomFinalPrice[0]);
+//						$res[$resKey][11] = trim($result[count($result) - 1]);
+//					}
+
+				} catch (Exception $e) {
+					file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true), FILE_APPEND);
+				}
+			}
+		}
+	}
 	*/
 
-// WILDBERRIES
-
-	//TEMP
-//	$filter = '.j-promo-tooltip-content p:last-child';
-//	$res = runPhantomCrawler($res, 3, $filter);
-//	file_put_contents(__DIR__ . "/wbRes.log", print_r($res, true));
-//	exit();
-	//ENDTEMP
-
-	$wbClient = new Client();
-
+	// WILDBERRIES
 	if (!empty($res)) {
-
 		foreach ($res as $resKey => $resValue) {
-
 			if (!empty($resValue[3]) && (strpos($resValue[3], "http") !== false)) {
-
-//				file_put_contents(__DIR__ . "/countUrls.log", print_r("1", true), FILE_APPEND);
-
-				$wbCrawler = $wbClient->request('GET', $resValue[3]);
-
-//				file_put_contents(__DIR__ . "/wbCrawler.log", print_r($wbCrawler, true), FILE_APPEND);
-
-				if ($wbCrawler->getUri() === $resValue[3]) {
-
-					// FIXME может возвращать неожиданный результат - перенести на фантом?
-
-					$wbPrice = $wbCrawler->filter('#Price ins')->each(function ($node) {
-						return $node->text();
-					});
-
-					//TEMP пробуем реализацию через фантом
+				try {
 					$serviceContainer = PJSServiceContainer::getInstance();
-					// ENDTEMP
+					$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+					$client = PJSClient::getInstance();
+					$client->getProcedureLoader()->addLoader($procedureLoader);
+					$client->isLazy();
+					$request = $client->getMessageFactory()->createRequest($resValue[3]);
+					$request->setTimeout(3000);
+					$response = $client->getMessageFactory()->createResponse();
+					$client->send($request, $response);
+					$phantomCrawler = new Crawler($response->getContent());
 
-					$res[$resKey][4] = trim($wbPrice[0]);
-
-					// Базовая скидка
-
-					$wbDiscountPrice = $wbCrawler->filter('.about-bonus .add-discount-text-price')->each(function ($node) {
+					$phantomBasePrice = $phantomCrawler->filter('#Price ins')->each(function ($node) {
 						return $node->text();
 					});
 
-					$res[$resKey][5] = trim($wbDiscountPrice[0]);
+					$phantomDiscountPrice = $phantomCrawler->filter('.about-bonus .add-discount-text-price')->each(function ($node) {
+						return $node->text();
+					});
 
-					// Скидка + промокод (через phantomjs)
+					$phantomFinalPrice = $phantomCrawler->filter('.j-promo-tooltip-content p:last-child')->each(function ($node) {
+						return $node->text();
+					});
 
-					try {
+					$res[$resKey][4] = trim($phantomBasePrice[0]);
+					$res[$resKey][5] = trim($phantomDiscountPrice[0]);
 
-						$serviceContainer = PJSServiceContainer::getInstance();
-
-						$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
-
-						$client = PJSClient::getInstance();
-
-						$client->getProcedureLoader()->addLoader($procedureLoader);
-
-						// TODO включить кеш в продакшене
-
-//						$client->getProcedureCompiler()->clearCache();
-
-//						$client->getProcedureCompiler()->disableCache();
-
-						$client->isLazy();
-
-						$request = $client->getMessageFactory()->createRequest($resValue[3]);
-
-						$request->setTimeout(3000);
-
-						$response = $client->getMessageFactory()->createResponse();
-
-						$client->send($request, $response);
-
-						$phantomCrawler = new Crawler($response->getContent());
-
-						$phantomCrawlerResult = $phantomCrawler->filter('.j-promo-tooltip-content p:last-child')->each(function ($node) {
-							return $node->text();
-						});
-
-						if (stripos($phantomCrawlerResult[0], "{{") === false
-							&& stripos($phantomCrawlerResult[0], "Скидка") === false
-							&& stripos($phantomCrawlerResult[0], "Промокод") !== false
-						) {
-							$result = explode("%", $phantomCrawlerResult[0]);
-							$res[$resKey][6] = trim($result[count($result) - 1]);
-						}
-
-					} catch (Exception $e) {
-						file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true));
+					if (stripos($phantomFinalPrice[0], "{{") === false
+						&& stripos($phantomFinalPrice[0], "Скидка") === false
+						&& stripos($phantomFinalPrice[0], "Промокод") !== false
+					) {
+						$result = explode("%", $phantomFinalPrice[0]);
+						$res[$resKey][6] = trim($result[count($result) - 1]);
 					}
+
+				} catch (Exception $e) {
+					file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage(), true), FILE_APPEND);
 				}
 			}
-
-			file_put_contents(__DIR__ . "/wbRes.log", print_r($res, true));
-
 		}
 	}
 
-
-
-// TIPTOPKIDS
-
-	$ttcClient = new Client();
-
+	// TIPTOPKIDS
 	if (!empty($res)) {
-
 		foreach ($res as $resKey => $resValue) {
-
 			if (!empty($resValue[1]) && (strpos($resValue[1], "http") !== false)) {
+				try {
+					$serviceContainer = PJSServiceContainer::getInstance();
+					$procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($jsLocation);
+					$client = PJSClient::getInstance();
+					$client->getProcedureLoader()->addLoader($procedureLoader);
+					$client->isLazy();
+					$request = $client->getMessageFactory()->createRequest($resValue[1]);
+					$request->setTimeout(3000);
+					$response = $client->getMessageFactory()->createResponse();
+					$client->send($request, $response);
+					$phantomCrawler = new Crawler($response->getContent());
 
-				$ttcCrawler = $ttcClient->request('GET', $resValue[1]);
-
-				if ($ttcCrawler->getUri() === $resValue[1]) {
-
-					$ttcPrice = $ttcCrawler->filter('.price__pv.js-price_pv-3')->each(function ($node) {
+					$phantomBasePrice = $phantomCrawler->filter('.price__pv.js-price_pv-3')->each(function ($node) {
 						return $node->text();
 					});
 
-					$res[$resKey][7] = trim($ttcPrice[0]);
-
-					// Базовая скидка
-
-					$ttcDiscountPrice = $ttcCrawler->filter('.price__pdv.js-price_pdv-3')->each(function ($node) {
+					$phantomDiscountPrice = $phantomCrawler->filter('.price__pdv.js-price_pdv-3')->each(function ($node) {
 						return $node->text();
 					});
 
-					if (!empty($res[$resKey][7])) {
-						$res[$resKey][8] = trim($ttcDiscountPrice[0]);
-					} else {
-						$res[$resKey][7] = trim($ttcDiscountPrice[0]);
-					}
+					$res[$resKey][7] = trim($phantomBasePrice[0]);
+					$res[$resKey][8] = trim($phantomDiscountPrice[0]);
 
+				} catch (Exception $e) {
+					file_put_contents(__DIR__ . "/errors.log", print_r($e->getMessage() . "\n", true), FILE_APPEND);
 				}
 			}
 		}
 	}
 
-	// Очистим прайс от незаполненных полей шаблонизатора
-
+	// Очищаем прайс от незаполненных полей шаблонизатора
 	foreach ($res as $outerKey => $outerValue) {
 		foreach ($outerValue as $innerKey => $innerValue) {
 			if (stripos($innerValue, "{{") !== false) {
@@ -283,10 +200,7 @@ try {
 		}
 	}
 
-//	file_put_contents(__DIR__ . "/resAfter.log", print_r($res, true));
-
-// Записываем csv
-
+	// Записываем csv
 	$outputCsv = Writer::createFromFileObject(new SplTempFileObject());
 	$outputCsv->setDelimiter(";");
 	$outputCsv->setEnclosure('"');
@@ -311,9 +225,7 @@ try {
 		echo json_encode($directoryPath . "/output/" . $fileName);
 	}
 
-	// TODO заново читаем файл?
-
 } catch (Exception $e) {
 	file_put_contents(__DIR__ . "/global_errors.log", print_r($e->getMessage(), true));
 }
-require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php"); ?>
+require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/epilog_after.php");

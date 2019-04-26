@@ -1,7 +1,6 @@
 {
     "require": {
         "league/csv": "^8.0",
-        "fabpot/goutte": "^3.2",
         "jonnyw/php-phantomjs": "4.*"
     },
     "autoload": {
