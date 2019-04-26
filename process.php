@@ -84,9 +84,6 @@ try {
 
 	$wbClient = new Client();
 
-
-	file_put_contents(__DIR__ . "/res.log", print_r($res, true));
-
 	if (!empty($res)) {
 
 		foreach ($res as $resKey => $resValue) {
@@ -94,9 +91,6 @@ try {
 			if (!empty($resValue[3]) && strpos($resValue[3], "http")) {
 
 				$wbCrawler = $wbClient->request('GET', $resValue[3]);
-
-				file_put_contents(__DIR__ . "/wbCrawler.log", print_r($wbCrawler, true), FILE_APPEND);
-
 
 				if ($wbCrawler->getUri() === $resValue[3]) {
 
