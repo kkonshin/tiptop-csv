@@ -21,6 +21,8 @@ try {
 	$filePath = '';
 	$jsonRequest = file_get_contents('php://input');
 	$jsonRequestBody = json_decode($jsonRequest, true);
+
+//	file_put_contents(__DIR__ . "/jsonRequestBody.log", print_r($jsonRequestBody, true));
 	// Парсим CSV
 	if (is_array($jsonRequestBody) && !empty($jsonRequestBody)) {
 		$fileRes = CFile::GetByID($jsonRequestBody['element_id']);
@@ -37,6 +39,7 @@ try {
 	$res = $inputCsv->addFilter(function ($row, $index) {
 		return $index > 0;
 	})->fetchAll();
+
 
 	$columnNames = [
 		'Цена Wildberries',
@@ -81,13 +84,19 @@ try {
 
 	$wbClient = new Client();
 
+
+	file_put_contents(__DIR__ . "/res.log", print_r($res, true));
+
 	if (!empty($res)) {
 
 		foreach ($res as $resKey => $resValue) {
 
-			if (!empty($resValue[3])) {
+			if (!empty($resValue[3]) && strpos($resValue[3], "http")) {
 
 				$wbCrawler = $wbClient->request('GET', $resValue[3]);
+
+				file_put_contents(__DIR__ . "/wbCrawler.log", print_r($wbCrawler, true), FILE_APPEND);
+
 
 				if ($wbCrawler->getUri() === $resValue[3]) {
 

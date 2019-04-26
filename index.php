@@ -28,16 +28,17 @@ CJSCore::Init(array('fx', 'ajax', 'dd'));
 <?
 
 $APPLICATION->IncludeComponent(
-	"bitrix:main.file.input",
-	"csv_upload",
+	"bitrix:main.file.input", 
+	"csv_upload", 
 	array(
-		"INPUT_NAME"=>"TEST_NAME_INPUT",
-		"MULTIPLE"=>"N",
-		"MODULE_ID"=>"main",
-		"MAX_FILE_SIZE"=>"",
-		"ALLOW_UPLOAD"=>"F",
-		"ALLOW_UPLOAD_EXT"=>"csv",
-		"INPUT_VALUE" => $_POST["DOPFILE"]
+		"INPUT_NAME" => "TEST_NAME_INPUT",
+		"MULTIPLE" => "N",
+		"MODULE_ID" => "main",
+		"MAX_FILE_SIZE" => "",
+		"ALLOW_UPLOAD" => "F",
+		"ALLOW_UPLOAD_EXT" => "csv",
+		"INPUT_VALUE" => $_POST["DOPFILE"],
+		"COMPONENT_TEMPLATE" => "csv_upload"
 	),
 	false
 );?>
